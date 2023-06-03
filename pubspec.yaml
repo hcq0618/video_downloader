@@ -45,6 +45,12 @@ dependencies:
   # https://pub.dev/packages/chewie
   chewie: ^1.5.0
   intl: ^0.18.1
+  # https://pub.dev/packages/path_provider
+  path_provider: ^2.0.15
+  # https://pub.dev/packages/video_thumbnail
+  video_thumbnail: ^0.5.3
+  # https://pub.dev/packages/path/install
+  path: ^1.8.3
 
 dev_dependencies:
 

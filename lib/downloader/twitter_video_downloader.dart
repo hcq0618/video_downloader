@@ -1,16 +1,12 @@
 import 'dart:convert';
-import 'dart:ffi';
-
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:video_downloader/downloader/video_downloader.dart';
 
 // https://github.com/TamilKannanCV/twitter_extractor
-class TwitterVideoDownloader implements VideoDownloader {
+class TwitterVideoDownloader extends VideoDownloader {
   static const _api =
       "https://twittervideodownloaderpro.com/twittervideodownloadv2/index.php";
-
-  final dio = Dio();
 
   final _urlPattern = RegExp(
       r"(https?://twitter\.com/(?:!/)?(?<username>\w+)/status(es)?/(?<id>\d+))");
@@ -85,11 +81,11 @@ class TweetVideo extends Video {
     this.text,
     this.thumb,
     this.type,
-    String url,
+    super.url,
     this.bitrate,
     this.duration,
-    int size,
-  ) : super(url, size);
+    super.size,
+  );
 
   factory TweetVideo.fromJson(Map<String, dynamic> data) {
     final source = data["source"];

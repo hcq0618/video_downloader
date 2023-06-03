@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:video_downloader/page/saved_video_page.dart';
 import 'package:video_downloader/page/video_extractor_page.dart';
 
 void main() {
@@ -35,14 +36,15 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   late final TabController _tabController;
-  final tabs = const [
+  final _tabs = const [
     Tab(text: 'Video Extractor'),
+    Tab(text: 'Saved Video'),
   ];
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: tabs.length, vsync: this);
+    _tabController = TabController(length: _tabs.length, vsync: this);
   }
 
   @override
@@ -59,13 +61,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           children: [
             TabBar(
               controller: _tabController,
-              tabs: tabs,
+              tabs: _tabs,
             ),
             Expanded(
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  VideoExtractorPage(),
+                  VideoExtractorPage(_tabController),
+                  SavedVideoPage(_tabController),
                 ],
               ),
             ),
