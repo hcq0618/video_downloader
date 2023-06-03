@@ -17,9 +17,7 @@ class VideoDownloaderApp extends StatelessWidget {
     return MaterialApp(
       title: 'Video Downloader',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-            background: const Color.fromARGB(255, 204, 232, 207),
-            seedColor: Colors.blue),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
       debugShowCheckedModeBanner: false,
@@ -57,24 +55,21 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(15),
-          child: Column(
-            children: [
-              TabBar(
+        child: Column(
+          children: [
+            TabBar(
+              controller: _tabController,
+              tabs: tabs,
+            ),
+            Expanded(
+              child: TabBarView(
                 controller: _tabController,
-                tabs: tabs,
+                children: [
+                  VideoExtractorPage(),
+                ],
               ),
-              Expanded(
-                child: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    VideoExtractorPage(),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

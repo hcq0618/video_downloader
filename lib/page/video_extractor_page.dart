@@ -1,6 +1,9 @@
+import 'package:chewie/chewie.dart';
+import 'package:dartx/dartx.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:video_downloader/utils/formatter.dart';
 import 'package:video_player/video_player.dart';
 
 import '../downloader/twitter_video_downloader.dart';
@@ -19,26 +22,28 @@ class _VideoExtractorPageState extends State<VideoExtractorPage>
   final TextEditingController _urlEditorController = TextEditingController();
   bool _isExtractingVideoUrl = false;
   VideoPlayerController? _videoPlayerController;
+  ChewieController? _chewieController;
+  String _videoSize = "";
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // _videoPlayerController = VideoPlayerController.network(
-    //     'https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4')
-    //   ..initialize().then((_) {
-    //     // Ensure the first frame is shown after the video is initialized, even before the play button has been pressed.
-    //     setState(() {});
-    //   })
-    //   ..play();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _urlEditorController.dispose();
-    _videoPlayerController?.dispose();
+    _disposePlayer();
     super.dispose();
+  }
+
+  void _disposePlayer() {
+    _videoPlayerController?.dispose();
+    _videoPlayerController = null;
+    _chewieController?.dispose();
+    _chewieController = null;
   }
 
   @override
@@ -48,18 +53,21 @@ class _VideoExtractorPageState extends State<VideoExtractorPage>
     }
   }
 
-  _pasteFromClipboard() async {
+  void _pasteFromClipboard() async {
     final data = await Clipboard.getData(Clipboard.kTextPlain);
     _urlEditorController.text = data?.text ?? '';
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _buildVideoExtractor(),
-        _buildVideoPlayer(),
-      ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 15),
+      child: Column(
+        children: [
+          _buildVideoExtractor(),
+          _buildVideoPlayer(),
+        ],
+      ),
     );
   }
 
@@ -68,7 +76,13 @@ class _VideoExtractorPageState extends State<VideoExtractorPage>
       children: [
         TextField(
           controller: _urlEditorController,
-          decoration: const InputDecoration(hintText: 'Input or Paste URL'),
+          decoration: InputDecoration(
+            hintText: 'Input or Paste Tweet URL',
+            suffixIcon: IconButton(
+              onPressed: _urlEditorController.clear,
+              icon: const Icon(Icons.clear),
+            ),
+          ),
         ),
         Padding(
           padding: const EdgeInsets.only(top: 10),
@@ -92,27 +106,33 @@ class _VideoExtractorPageState extends State<VideoExtractorPage>
 
                     setState(() {
                       _isExtractingVideoUrl = true;
+                      _videoSize = '';
                     });
-                    final videoUrl = await widget._twitterVideoDownloader
-                        .extractVideoUrl(_urlEditorController.text);
+
+                    final video = await widget._twitterVideoDownloader
+                        .extractVideo(_urlEditorController.text);
+                    final videoUrl = video?.url ?? '';
                     if (kDebugMode) {
                       print(videoUrl);
                     }
 
-                    if (videoUrl.isNotEmpty) {
+                    if (videoUrl.isNotNullOrEmpty) {
                       final videoPlayerController =
-                          VideoPlayerController.network(videoUrl)
-                            ..addListener(() {
-                              setState(() {});
-                            })
-                            ..setLooping(true);
-                      await videoPlayerController.initialize();
-                      videoPlayerController.play();
+                          VideoPlayerController.network(videoUrl);
                       _videoPlayerController = videoPlayerController;
+
+                      _chewieController = ChewieController(
+                          videoPlayerController: videoPlayerController,
+                          autoInitialize: true,
+                          autoPlay: true,
+                          looping: true);
+                    } else {
+                      _disposePlayer();
                     }
 
                     setState(() {
                       _isExtractingVideoUrl = false;
+                      _videoSize = video?.size.readableFileSize() ?? '';
                     });
                   },
                   icon: _isExtractingVideoUrl
@@ -127,8 +147,11 @@ class _VideoExtractorPageState extends State<VideoExtractorPage>
                         )
                       : const Icon(Icons.download_rounded),
                   label: const Text('Extract Video'),
-                  size
                 ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(left: 5),
+                child: Text(_videoSize),
               )
             ],
           ),
@@ -138,19 +161,24 @@ class _VideoExtractorPageState extends State<VideoExtractorPage>
   }
 
   Widget _buildVideoPlayer() {
+    final chewieController = _chewieController;
+    final showVideoPlayer = chewieController != null;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _videoPlayerController?.value.isInitialized ?? false
-            ? Container(
-                width: 350,
-                height: 500,
-                padding: const EdgeInsets.only(top: 20),
-                child: AspectRatio(
-                  aspectRatio: _videoPlayerController!.value.aspectRatio,
-                  child: VideoPlayer(_videoPlayerController!),
-                ))
-            : const Spacer()
+        Container(
+          width: 360,
+          height: 550,
+          margin: const EdgeInsets.only(top: 20),
+          color: showVideoPlayer ? Colors.transparent : Colors.black,
+          child: showVideoPlayer
+              ? Chewie(controller: chewieController)
+              : const Icon(
+                  Icons.play_circle,
+                  size: 100,
+                  color: Colors.grey,
+                ),
+        ),
       ],
     );
   }

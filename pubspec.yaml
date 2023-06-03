@@ -42,6 +42,9 @@ dependencies:
   # https://pub.dev/packages/video_player
   # https://docs.flutter.dev/cookbook/plugins/play-video
   video_player: ^2.6.1
+  # https://pub.dev/packages/chewie
+  chewie: ^1.5.0
+  intl: ^0.18.1
 
 dev_dependencies:
 

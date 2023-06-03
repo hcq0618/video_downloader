@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:ffi';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
@@ -47,16 +48,16 @@ class TwitterVideoDownloader implements VideoDownloader {
   }
 
   @override
-  Future<String> extractVideoUrl(String sourceUrl) async {
+  Future<Video?> extractVideo(String sourceUrl) async {
     if (sourceUrl.isEmpty) {
-      return '';
+      return null;
     }
 
     try {
       final tweet = await _extractTweet(sourceUrl);
-      return tweet.videos.first.url;
+      return tweet.videos.firstOrNull;
     } catch (e) {
-      return '';
+      return null;
     }
   }
 }
@@ -75,20 +76,20 @@ class Tweet {
   }
 }
 
-class TweetVideo {
-  final String source, text, thumb, type, url;
-  final int bitrate, duration, size;
+class TweetVideo extends Video {
+  final String source, text, thumb, type;
+  final int bitrate, duration;
 
-  const TweetVideo(
+  TweetVideo(
     this.source,
     this.text,
     this.thumb,
     this.type,
-    this.url,
+    String url,
     this.bitrate,
     this.duration,
-    this.size,
-  );
+    int size,
+  ) : super(url, size);
 
   factory TweetVideo.fromJson(Map<String, dynamic> data) {
     final source = data["source"];
