@@ -20,6 +20,7 @@ class SavedVideosPage extends StatefulWidget {
 
 class _SavedVideosPageState extends LifecycleState<SavedVideosPage> {
   List<_SavedVideoInfo> _videoInfoList = [];
+  String _totalVideosInfo = '';
 
   @override
   void initState() {
@@ -36,6 +37,8 @@ class _SavedVideosPageState extends LifecycleState<SavedVideosPage> {
   @override
   void onResume() {
     if (widget._tabController.index == 1) {
+      showLoadingDialog(context);
+
       getApplicationDocumentsDirectory().asStream().listen((dir) {
         final infoList = <_SavedVideoInfo>[];
 
@@ -57,10 +60,20 @@ class _SavedVideosPageState extends LifecycleState<SavedVideosPage> {
             infoList.add(info);
           },
           onDone: () {
+            final totalVideoCount = infoList.length;
+            final totalVideoSize = infoList
+                .fold(
+                    0, (previousValue, element) => previousValue + element.size)
+                .readableFileSize();
+
             setState(() {
               _videoInfoList = infoList;
+              _totalVideosInfo = "$totalVideoCount videos $totalVideoSize";
             });
+
+            dismissDialog(context);
           },
+          onError: (_) => dismissDialog(context),
           cancelOnError: true,
         );
       });
@@ -84,7 +97,8 @@ class _SavedVideosPageState extends LifecycleState<SavedVideosPage> {
               crossAxisSpacing: 5,
               mainAxisSpacing: 5,
               crossAxisCount: 3,
-              children: _buildThumbnails(context),
+              children: List.generate(_videoInfoList.length,
+                  (index) => _buildThumbnail(context, _videoInfoList[index])),
             ),
           ),
         )
@@ -115,62 +129,64 @@ class _SavedVideosPageState extends LifecycleState<SavedVideosPage> {
           icon: const Icon(Icons.copy),
           label: const Text('Copy from Gallery'),
         ),
+        Padding(
+          padding: const EdgeInsets.only(left: 10),
+          child: Text(_totalVideosInfo),
+        ),
       ],
     );
   }
 
-  List<Widget> _buildThumbnails(BuildContext context) {
-    return _videoInfoList.map((info) {
-      return GestureDetector(
-        child: Container(
-          decoration: const BoxDecoration(color: Colors.black),
-          child: Stack(
-            children: [
-              Align(
-                alignment: Alignment.center,
-                child: info.thumbnail != null
-                    ? Image.memory(info.thumbnail!)
-                    : const Spacer(),
-              ),
-              Align(
-                alignment: Alignment.bottomLeft,
-                child: GestureDetector(
-                  onTap: () {
-                    showVideoDeleteDialog(context, () async {
-                      await File(info.filePath).delete();
-                      onResume();
-                    });
-                  },
-                  child: const Icon(
-                    Icons.delete,
-                    color: Colors.grey,
-                  ),
-                ),
-              ),
-              Align(
-                alignment: Alignment.bottomRight,
-                child: Padding(
-                  padding: const EdgeInsets.all(3),
-                  child: Text(
-                    info.size.readableFileSize(),
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                ),
-              )
-            ],
-          ),
-        ),
-        onTap: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => VideoPlayerPage(VideoDetail(info.filePath)),
+  Widget _buildThumbnail(BuildContext context, _SavedVideoInfo info) {
+    return GestureDetector(
+      child: Container(
+        decoration: const BoxDecoration(color: Colors.black),
+        child: Stack(
+          children: [
+            Align(
+              alignment: Alignment.center,
+              child: info.thumbnail != null
+                  ? Image.memory(info.thumbnail!)
+                  : const SizedBox.shrink(),
             ),
-          );
-          onResume();
-        },
-      );
-    }).toList();
+            Align(
+              alignment: Alignment.bottomLeft,
+              child: GestureDetector(
+                onTap: () {
+                  showVideoDeleteDialog(context, () async {
+                    await File(info.filePath).delete();
+                    onResume();
+                  });
+                },
+                child: const Icon(
+                  Icons.delete,
+                  color: Colors.grey,
+                ),
+              ),
+            ),
+            Align(
+              alignment: Alignment.bottomRight,
+              child: Padding(
+                padding: const EdgeInsets.all(3),
+                child: Text(
+                  info.size.readableFileSize(),
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ),
+            )
+          ],
+        ),
+      ),
+      onTap: () async {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => VideoPlayerPage(VideoDetail(info.filePath)),
+          ),
+        );
+        onResume();
+      },
+    );
   }
 }
 
