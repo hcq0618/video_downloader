@@ -7,7 +7,6 @@ import 'package:video_downloader/utils/formatter.dart';
 import 'package:video_downloader/widget/load_button.dart';
 import 'package:video_downloader/widget/toast.dart';
 import 'package:video_player/video_player.dart';
-
 import '../downloader/twitter_video_downloader.dart';
 import 'lifecycle_state.dart';
 

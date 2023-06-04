@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:video_downloader/page/saved_video_page.dart';
+import 'package:video_downloader/page/saved_videos_page.dart';
 import 'package:video_downloader/page/video_extractor_page.dart';
 
 void main() {
@@ -68,7 +68,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 controller: _tabController,
                 children: [
                   VideoExtractorPage(_tabController),
-                  SavedVideoPage(_tabController),
+                  SavedVideosPage(_tabController),
                 ],
               ),
             ),

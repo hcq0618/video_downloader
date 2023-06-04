@@ -8,18 +8,17 @@ import 'package:video_downloader/utils/formatter.dart';
 import 'package:video_downloader/widget/dialog.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:path/path.dart';
 
-class SavedVideoPage extends StatefulWidget {
+class SavedVideosPage extends StatefulWidget {
   final TabController _tabController;
 
-  const SavedVideoPage(this._tabController, {super.key});
+  const SavedVideosPage(this._tabController, {super.key});
 
   @override
-  State<StatefulWidget> createState() => _SavedVideoPageState();
+  State<StatefulWidget> createState() => _SavedVideosPageState();
 }
 
-class _SavedVideoPageState extends LifecycleState<SavedVideoPage> {
+class _SavedVideosPageState extends LifecycleState<SavedVideosPage> {
   List<_SavedVideoInfo> _videoInfoList = [];
 
   @override
