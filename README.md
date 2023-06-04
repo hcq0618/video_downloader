@@ -8,6 +8,9 @@
 # TODO
 1. Face id or gesture unlock
 2. Batch delete or export videos from app directory to gallery
+3. Add app icon
+4. Support image
+5. Support other social platforms
 
 # Screenshots
 ![](assets/screenshot1.jpeg)
