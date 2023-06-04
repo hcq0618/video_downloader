@@ -2,7 +2,10 @@ import 'dart:io';
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart';
+import 'package:video_downloader/widget/dialog.dart';
+import 'package:video_downloader/widget/toast.dart';
 import 'package:video_player/video_player.dart';
+import 'package:gallery_saver/gallery_saver.dart';
 
 class VideoDetail {
   final String filePath;
@@ -56,16 +59,35 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
           ),
           Padding(
             padding: const EdgeInsets.only(top: 10),
-            child: ElevatedButton.icon(
-              onPressed: () async {
-                await File(widget._detail.filePath).delete();
-                if (!mounted) return;
-                Navigator.pop(context);
-              },
-              icon: const Icon(Icons.delete),
-              label: const Text('Delete'),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () {
+                    showVideoDeleteDialog(context, () async {
+                      await File(widget._detail.filePath).delete();
+                      if (!mounted) return;
+                      Navigator.pop(context);
+                    });
+                  },
+                  icon: const Icon(Icons.delete),
+                  label: const Text('Delete'),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 10),
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      await GallerySaver.saveVideo(widget._detail.filePath);
+                      if (!mounted) return;
+                      'Export success'.showToast(context);
+                    },
+                    icon: const Icon(Icons.save),
+                    label: const Text('Export into Gallery'),
+                  ),
+                ),
+              ],
             ),
-          )
+          ),
         ],
       ),
     );

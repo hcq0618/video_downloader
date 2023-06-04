@@ -51,6 +51,10 @@ dependencies:
   video_thumbnail: ^0.5.3
   # https://pub.dev/packages/path/install
   path: ^1.8.3
+  # https://pub.dev/packages/image_picker
+  image_picker: ^0.8.7+5
+  # https://pub.dev/packages/gallery_saver
+  gallery_saver: ^2.3.2
 
 dev_dependencies:
 
