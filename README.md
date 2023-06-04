@@ -10,6 +10,6 @@
 2. Batch delete or export videos from app directory to gallery
 
 # Screenshots
-![](assets/screenshot1.jpeg =585x1266)
-![](assets/screenshot2.jpeg =585x1266)
-![](assets/screenshot3.jpeg =585x1266)
+![](assets/screenshot1.jpeg)
+![](assets/screenshot2.jpeg)
+![](assets/screenshot3.jpeg)
