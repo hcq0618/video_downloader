@@ -11,6 +11,7 @@
 3. Add app icon
 4. Support image
 5. Support other social platforms
+6. Tweet URL history
 
 # Screenshots
 ![](assets/screenshot1.jpeg)
