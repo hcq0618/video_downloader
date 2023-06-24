@@ -178,13 +178,17 @@ class _SavedVideosPageState extends LifecycleState<SavedVideosPage> {
         ),
       ),
       onTap: () async {
-        await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => VideoPlayerPage(VideoDetail(info.filePath)),
-          ),
-        );
-        onResume();
+        final videoChanged = await Navigator.push<bool>(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    VideoPlayerPage(VideoDetail(info.filePath)),
+              ),
+            ) ??
+            false;
+        if (videoChanged) {
+          onResume();
+        }
       },
     );
   }

@@ -88,6 +88,7 @@ class _VideoExtractorPageState extends LifecycleState<VideoExtractorPage> {
 
   Future<void> _extractVideoUrl(BuildContext context) async {
     _saveVideoController.setResult('');
+    _disposePlayer();
 
     final video = await widget._twitterVideoDownloader
         .extractVideo(_urlEditorController.text);
@@ -109,7 +110,6 @@ class _VideoExtractorPageState extends LifecycleState<VideoExtractorPage> {
       if (mounted) {
         'No video url'.showToast(context);
       }
-      _disposePlayer();
     }
 
     _videoSizeController.setResult(video?.size.readableFileSize());

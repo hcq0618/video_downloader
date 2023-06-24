@@ -25,6 +25,7 @@ class VideoPlayerPage extends StatefulWidget {
 class _VideoPlayerPageState extends State<VideoPlayerPage> {
   late final VideoPlayerController _videoPlayerController;
   late final ChewieController _chewieController;
+  var _videoChanged = false;
 
   @override
   void initState() {
@@ -47,49 +48,56 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(basename(widget._detail.filePath)),
-      ),
-      body: Column(
-        children: [
-          SizedBox(
-            height: 650,
-            child: Chewie(controller: _chewieController),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(top: 10),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: () {
-                    showVideoDeleteDialog(context, () async {
-                      await File(widget._detail.filePath).delete();
-                      if (!mounted) return;
-                      Navigator.pop(context);
-                    });
-                  },
-                  icon: const Icon(Icons.delete),
-                  label: const Text('Delete'),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(left: 10),
-                  child: ElevatedButton.icon(
-                    onPressed: () async {
-                      await GallerySaver.saveVideo(widget._detail.filePath);
-                      if (!mounted) return;
-                      'Export success'.showToast(context);
-                    },
-                    icon: const Icon(Icons.save),
-                    label: const Text('Export into Gallery'),
-                  ),
-                ),
-              ],
+    return WillPopScope(
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(basename(widget._detail.filePath)),
+        ),
+        body: Column(
+          children: [
+            SizedBox(
+              height: 650,
+              child: Chewie(controller: _chewieController),
             ),
-          ),
-        ],
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      showVideoDeleteDialog(context, () async {
+                        await File(widget._detail.filePath).delete();
+                        if (!mounted) return;
+                        Navigator.pop(context, true);
+                      });
+                    },
+                    icon: const Icon(Icons.delete),
+                    label: const Text('Delete'),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 10),
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        _videoChanged = true;
+                        await GallerySaver.saveVideo(widget._detail.filePath);
+                        if (!mounted) return;
+                        'Export success'.showToast(context);
+                      },
+                      icon: const Icon(Icons.save),
+                      label: const Text('Export into Gallery'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
+      onWillPop: () async {
+        Navigator.pop(context, _videoChanged);
+        return false;
+      },
     );
   }
 }
