@@ -9,6 +9,8 @@ import 'package:video_downloader/widget/dialog.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'disposable_state.dart';
+
 class SavedVideosPage extends StatefulWidget {
   final TabController _tabController;
 
@@ -37,7 +39,7 @@ class _SavedVideosPageState extends LifecycleState<SavedVideosPage> {
   @override
   void onResume() {
     if (widget._tabController.index == 1) {
-      showLoadingDialog(context);
+      showLoadingDialog(this, context);
 
       getApplicationDocumentsDirectory().asStream().listen((dir) {
         final infoList = <_SavedVideoInfo>[];
@@ -75,8 +77,8 @@ class _SavedVideosPageState extends LifecycleState<SavedVideosPage> {
           },
           onError: (_) => dismissDialog(context),
           cancelOnError: true,
-        );
-      });
+        ).canceledBy(this);
+      }).canceledBy(this);
     }
   }
 
@@ -153,7 +155,7 @@ class _SavedVideosPageState extends LifecycleState<SavedVideosPage> {
               alignment: Alignment.bottomLeft,
               child: GestureDetector(
                 onTap: () {
-                  showVideoDeleteDialog(context, () async {
+                  showVideoDeleteDialog(this, context, () async {
                     await File(info.filePath).delete();
                     onResume();
                   });

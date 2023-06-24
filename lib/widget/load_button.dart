@@ -1,33 +1,19 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-class LoadButton extends StatefulWidget {
+class LoadButton extends StatelessWidget {
   final IconData iconData;
   final String text;
   final AsyncCallback onPressed;
   final LoadResultController? loadResultController;
+  final _isLoading = ValueNotifier(false);
 
-  const LoadButton(
+  LoadButton(
       {super.key,
       required this.iconData,
       required this.text,
       required this.onPressed,
       this.loadResultController});
-
-  @override
-  State<StatefulWidget> createState() => LoadButtonState();
-}
-
-class LoadResultController {
-  final _loadResult = ValueNotifier('');
-
-  void setResult(String? result) {
-    _loadResult.value = result ?? '';
-  }
-}
-
-class LoadButtonState extends State<LoadButton> {
-  final _isLoading = ValueNotifier(false);
 
   @override
   Widget build(BuildContext context) {
@@ -40,16 +26,16 @@ class LoadButtonState extends State<LoadButton> {
             }
 
             _isLoading.value = true;
-            widget.loadResultController?.setResult('');
+            loadResultController?.setResult('');
 
-            await widget.onPressed();
+            await onPressed();
 
             _isLoading.value = false;
           },
           icon: ValueListenableBuilder(
             valueListenable: _isLoading,
             builder: (context, value, child) {
-              return value ? child! : Icon(widget.iconData);
+              return value ? child! : Icon(iconData);
             },
             child: Container(
               width: 20,
@@ -61,13 +47,13 @@ class LoadButtonState extends State<LoadButton> {
               ),
             ),
           ),
-          label: Text(widget.text),
+          label: Text(text),
         ),
         Padding(
           padding: const EdgeInsets.only(left: 5),
           child: ValueListenableBuilder(
             valueListenable:
-                widget.loadResultController?._loadResult ?? ValueNotifier(''),
+                loadResultController?._loadResult ?? ValueNotifier(''),
             builder: (context, value, child) {
               return Text(value);
             },
@@ -75,5 +61,13 @@ class LoadButtonState extends State<LoadButton> {
         ),
       ],
     );
+  }
+}
+
+class LoadResultController {
+  final _loadResult = ValueNotifier('');
+
+  void setResult(String? result) {
+    _loadResult.value = result ?? '';
   }
 }

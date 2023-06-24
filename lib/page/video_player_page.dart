@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart';
+import 'package:video_downloader/page/disposable_state.dart';
 import 'package:video_downloader/widget/dialog.dart';
 import 'package:video_downloader/widget/toast.dart';
 import 'package:video_player/video_player.dart';
@@ -22,7 +23,8 @@ class VideoPlayerPage extends StatefulWidget {
   State<StatefulWidget> createState() => _VideoPlayerPageState();
 }
 
-class _VideoPlayerPageState extends State<VideoPlayerPage> {
+class _VideoPlayerPageState extends State<VideoPlayerPage>
+    with DisposableState {
   late final VideoPlayerController _videoPlayerController;
   late final ChewieController _chewieController;
   var _videoChanged = false;
@@ -66,7 +68,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
                 children: [
                   ElevatedButton.icon(
                     onPressed: () {
-                      showVideoDeleteDialog(context, () async {
+                      showVideoDeleteDialog(this, context, () async {
                         await File(widget._detail.filePath).delete();
                         if (!mounted) return;
                         Navigator.pop(context, true);

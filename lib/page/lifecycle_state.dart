@@ -1,7 +1,8 @@
 import 'package:flutter/cupertino.dart';
+import 'package:video_downloader/page/disposable_state.dart';
 
 abstract class LifecycleState<T extends StatefulWidget> extends State<T>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver, DisposableState {
   @protected
   @override
   @mustCallSuper
@@ -15,6 +16,8 @@ abstract class LifecycleState<T extends StatefulWidget> extends State<T>
   @mustCallSuper
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    cancelSubscriptions();
+    dismissDialogs();
     super.dispose();
   }
 
