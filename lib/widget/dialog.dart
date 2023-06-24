@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:video_downloader/page/disposable_state.dart';
+import 'package:video_downloader/page/disposable_widget.dart';
 
-Future<void> showVideoDeleteDialog(DisposableState disposableState,
+Future<void> showVideoDeleteDialog(DisposableWidget disposableState,
     BuildContext context, VoidCallback onConfirm) async {
   return showDialog<void>(
     context: context,
@@ -28,7 +28,7 @@ Future<void> showVideoDeleteDialog(DisposableState disposableState,
 }
 
 Future<void> showLoadingDialog(
-    DisposableState disposableState, BuildContext context) async {
+    DisposableWidget disposableState, BuildContext context) async {
   return showDialog(
     // The user CANNOT close this dialog  by pressing outside it
     barrierDismissible: false,

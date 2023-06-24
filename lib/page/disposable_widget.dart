@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:video_downloader/widget/dialog.dart';
 
-mixin DisposableState {
+mixin DisposableWidget {
   final Set<StreamSubscription> _subscriptions = {};
   final Set<BuildContext> dialogContexts = {};
 
@@ -30,7 +30,7 @@ mixin DisposableState {
 }
 
 extension DisposableStreamSubscriton on StreamSubscription {
-  void canceledBy(DisposableState state) {
+  void canceledBy(DisposableWidget state) {
     state.addSubscription(this);
   }
 }

@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart';
-import 'package:video_downloader/page/disposable_state.dart';
+import 'package:video_downloader/page/disposable_widget.dart';
 import 'package:video_downloader/widget/dialog.dart';
 import 'package:video_downloader/widget/toast.dart';
 import 'package:video_player/video_player.dart';
@@ -24,7 +24,7 @@ class VideoPlayerPage extends StatefulWidget {
 }
 
 class _VideoPlayerPageState extends State<VideoPlayerPage>
-    with DisposableState {
+    with DisposableWidget {
   late final VideoPlayerController _videoPlayerController;
   late final ChewieController _chewieController;
   var _videoChanged = false;

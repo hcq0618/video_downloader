@@ -9,7 +9,7 @@ import 'package:video_downloader/widget/dialog.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:image_picker/image_picker.dart';
 
-import 'disposable_state.dart';
+import 'disposable_widget.dart';
 
 class SavedVideosPage extends StatefulWidget {
   final TabController _tabController;
