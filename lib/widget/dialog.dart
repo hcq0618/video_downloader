@@ -37,18 +37,16 @@ Future<void> showLoadingDialog(
       disposableState.addDialog(context);
       return const Dialog(
         backgroundColor: Colors.white,
-        child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 15),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(),
-              Padding(
-                padding: EdgeInsets.only(top: 15),
-                child: Text('Loading...'),
-              ),
-            ],
-          ),
+        insetPadding: EdgeInsets.symmetric(horizontal: 120.0, vertical: 38.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(strokeWidth: 2),
+            Padding(
+              padding: EdgeInsets.only(left: 15, top: 25, bottom: 25),
+              child: Text('Loading...'),
+            ),
+          ],
         ),
       );
     },

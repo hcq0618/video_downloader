@@ -3,21 +3,16 @@ import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart';
 import 'package:video_downloader/page/disposable_widget.dart';
+import 'package:video_downloader/page/saved_videos_page.dart';
 import 'package:video_downloader/widget/dialog.dart';
 import 'package:video_downloader/widget/toast.dart';
 import 'package:video_player/video_player.dart';
 import 'package:gallery_saver/gallery_saver.dart';
 
-class VideoDetail {
-  final String filePath;
-
-  VideoDetail(this.filePath);
-}
-
 class VideoPlayerPage extends StatefulWidget {
-  final VideoDetail _detail;
+  final VideoDetails _details;
 
-  const VideoPlayerPage(this._detail, {super.key});
+  const VideoPlayerPage(this._details, {super.key});
 
   @override
   State<StatefulWidget> createState() => _VideoPlayerPageState();
@@ -33,7 +28,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage>
   void initState() {
     super.initState();
     _videoPlayerController =
-        VideoPlayerController.file(File(widget._detail.filePath));
+        VideoPlayerController.file(File(widget._details.filePath));
     _chewieController = ChewieController(
         videoPlayerController: _videoPlayerController,
         autoInitialize: true,
@@ -53,7 +48,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage>
     return WillPopScope(
       child: Scaffold(
         appBar: AppBar(
-          title: Text(basename(widget._detail.filePath)),
+          title: Text(basename(widget._details.filePath)),
         ),
         body: Column(
           children: [
@@ -69,7 +64,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage>
                   ElevatedButton.icon(
                     onPressed: () {
                       showVideoDeleteDialog(this, context, () async {
-                        await File(widget._detail.filePath).delete();
+                        await File(widget._details.filePath).delete();
                         if (!mounted) return;
                         Navigator.pop(context, true);
                       });
@@ -82,7 +77,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage>
                     child: ElevatedButton.icon(
                       onPressed: () async {
                         _videoChanged = true;
-                        await GallerySaver.saveVideo(widget._detail.filePath);
+                        await GallerySaver.saveVideo(widget._details.filePath);
                         if (!mounted) return;
                         'Export success'.showToast(context);
                       },
