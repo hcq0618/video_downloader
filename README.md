@@ -4,6 +4,8 @@
 3. Copy videos from gallery into app directory
 4. Manage videos from app diretory
 5. Export video from app directory into gallery
+6. Scan duplicated videos
+7. Support video compression
 
 # TODO
 1. Face id or gesture unlock

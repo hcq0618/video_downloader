@@ -1,13 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:dartx/dartx.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_video_info/flutter_video_info.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:video_compress/video_compress.dart';
 import 'package:video_downloader/page/video_player_page.dart';
 import 'package:video_downloader/utils/formatter.dart';
 import 'package:video_downloader/widget/dialog.dart';
-import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:crypto/crypto.dart';
 import 'disposable_widget.dart';
@@ -55,46 +55,50 @@ class _SavedVideosPageState extends State<SavedVideosPage>
 
       getApplicationDocumentsDirectory().asStream().listen((dir) {
         final detailsList = <VideoDetails>[];
-        final videoInfo = FlutterVideoInfo();
 
         dir.list(recursive: true).asyncMap((file) async {
-          if (kDebugMode) {
-            print(file.path);
-          }
-          final thumbnail = await VideoThumbnail.thumbnailData(
-            video: file.path,
-            imageFormat: ImageFormat.JPEG,
-            // specify the width of the thumbnail, let the height auto-scaled to keep the source aspect ratio
-            maxWidth: 128,
+          final thumbnail = await VideoCompress.getByteThumbnail(
+            file.path,
             quality: 80,
+            position: 1,
           );
-          final videoData = await videoInfo.getVideoInfo(file.path);
-          return VideoDetails(thumbnail, videoData, file.path);
+          final mediaInfo = await VideoCompress.getMediaInfo(file.path);
+          if (kDebugMode) {
+            print(mediaInfo.path);
+          }
+          return VideoDetails(thumbnail, mediaInfo);
         }).listen(
           (info) {
             detailsList.add(info);
           },
-          onDone: () {
-            final totalVideoCount = detailsList.length;
-            final totalVideoSize = detailsList
-                .fold(
-                    0,
-                    (previousValue, element) =>
-                        previousValue + (element.videoData?.filesize ?? 0))
-                .readableFileSize();
+          onDone: () async {
+            await VideoCompress.deleteAllCache();
+            if (kDebugMode) {
+              print("deleted all cache of VideoCompress");
+            }
 
             setState(() {
               _videoDetailsList = detailsList;
-              _totalVideosInfo = "$totalVideoCount videos $totalVideoSize";
+              _updateTotalVideosInfo();
+              dismissDialog(context);
             });
-
-            dismissDialog(context);
           },
           onError: (_) => dismissDialog(context),
           cancelOnError: true,
         ).canceledBy(this);
       }).canceledBy(this);
     }
+  }
+
+  void _updateTotalVideosInfo() {
+    final totalVideoCount = _videoDetailsList.length;
+    final totalVideoSize = _videoDetailsList
+        .fold(
+            0,
+            (previousValue, element) =>
+                previousValue + (element.mediaInfo.filesize ?? 0))
+        .readableFileSize();
+    _totalVideosInfo = "$totalVideoCount videos $totalVideoSize";
   }
 
   @override
@@ -126,47 +130,45 @@ class _SavedVideosPageState extends State<SavedVideosPage>
     );
   }
 
-  void _scanDuplicatedVideos() {
+  Future<void> _scanDuplicatedVideos() async {
     showLoadingDialog(this, context);
 
     for (var videoDetails in _videoDetailsList) {
-      if (videoDetails.videoData == null) {
-        continue;
-      }
-
       for (var videoDetails2 in _videoDetailsList) {
         if (identical(videoDetails, videoDetails2)) {
-          continue;
-        }
-        if (videoDetails2.videoData == null) {
           continue;
         }
         if (videoDetails2.maybeDuplicated) {
           continue;
         }
 
-        if (videoDetails.filePath == videoDetails2.filePath) {
+        if (videoDetails.mediaInfo.path == videoDetails2.mediaInfo.path) {
           videoDetails.maybeDuplicatedWith(videoDetails2);
           continue;
         }
-        if (videoDetails.videoData!.filesize ==
-            videoDetails2.videoData!.filesize) {
+        if (videoDetails.mediaInfo.filesize ==
+            videoDetails2.mediaInfo.filesize) {
           videoDetails.maybeDuplicatedWith(videoDetails2);
           continue;
         }
-        if (videoDetails.videoData!.duration ==
-            videoDetails2.videoData!.duration) {
+        if (videoDetails.mediaInfo.duration ==
+            videoDetails2.mediaInfo.duration) {
           videoDetails.maybeDuplicatedWith(videoDetails2);
           continue;
         }
-        if (videoDetails.getMD5() == videoDetails2.getMD5()) {
+
+        final videoMD5 = await videoDetails.getMD5();
+        final video2MD5 = await videoDetails2.getMD5();
+        if (videoMD5 == video2MD5) {
           videoDetails.maybeDuplicatedWith(videoDetails2);
           continue;
         }
       }
     }
 
-    dismissDialog(context);
+    setState(() {
+      dismissDialog(context);
+    });
   }
 
   Widget _buildGalleryActionButtons() {
@@ -180,7 +182,9 @@ class _SavedVideosPageState extends State<SavedVideosPage>
         Padding(
           padding: const EdgeInsets.only(left: 5),
           child: IconButton(
-            onPressed: _scanDuplicatedVideos,
+            onPressed: () async {
+              _scanDuplicatedVideos();
+            },
             icon: const Icon(Icons.scanner),
           ),
         ),
@@ -188,19 +192,23 @@ class _SavedVideosPageState extends State<SavedVideosPage>
           padding: const EdgeInsets.only(left: 5),
           child: IconButton(
             onPressed: () async {
-              final ImagePicker picker = ImagePicker();
-              final XFile? galleryVideo =
+              showLoadingDialog(this, context);
+              final picker = ImagePicker();
+              final galleryVideo =
                   await picker.pickVideo(source: ImageSource.gallery);
-              if (galleryVideo == null) {
-                return;
+              if (galleryVideo != null) {
+                if (kDebugMode) {
+                  print(galleryVideo.name);
+                }
+                final saveDirectory = await getApplicationDocumentsDirectory();
+                await galleryVideo
+                    .saveTo('${saveDirectory.path}/${galleryVideo.name}');
               }
+              setState(() {
+                dismissDialog(context);
+              });
 
-              if (kDebugMode) {
-                print(galleryVideo.name);
-              }
-              final saveDirectory = await getApplicationDocumentsDirectory();
-              await galleryVideo
-                  .saveTo('${saveDirectory.path}/${galleryVideo.name}');
+              _reloadSavedVideos();
             },
             icon: const Icon(Icons.copy),
           ),
@@ -230,8 +238,11 @@ class _SavedVideosPageState extends State<SavedVideosPage>
               child: GestureDetector(
                 onTap: () {
                   showVideoDeleteDialog(this, context, () async {
-                    await File(details.filePath).delete();
-                    _reloadSavedVideos();
+                    await File(details.mediaInfo.path.orEmpty()).delete();
+                    _videoDetailsList.remove(details);
+                    setState(() {
+                      _updateTotalVideosInfo();
+                    });
                   });
                 },
                 child: const Icon(
@@ -245,15 +256,47 @@ class _SavedVideosPageState extends State<SavedVideosPage>
               child: Padding(
                 padding: const EdgeInsets.all(3),
                 child: Text(
-                  details.videoData?.filesize?.readableFileSize() ?? "",
+                  details.mediaInfo.filesize?.readableFileSize() ?? "",
                   style: const TextStyle(color: Colors.white),
+                ),
+              ),
+            ),
+            Align(
+              alignment: Alignment.topRight,
+              child: GestureDetector(
+                onTap: () {
+                  showConfirmDialog(
+                      this, context, "Do you want to compress the video?",
+                      () async {
+                    showLoadingDialog(this, context);
+
+                    final originalPath = details.mediaInfo.path.orEmpty();
+                    final mediaInfo = await VideoCompress.compressVideo(
+                      originalPath,
+                      quality: VideoQuality.DefaultQuality,
+                      includeAudio: true,
+                      deleteOrigin: true,
+                    );
+                    final compressPath = mediaInfo?.path ?? "";
+                    await File(compressPath).copy(originalPath);
+
+                    setState(() {
+                      dismissDialog(context);
+                    });
+
+                    _reloadSavedVideos();
+                  });
+                },
+                child: const Icon(
+                  Icons.compress,
+                  color: Colors.grey,
                 ),
               ),
             ),
             Visibility(
               visible: details.maybeDuplicated,
               child: const Align(
-                alignment: Alignment.topRight,
+                alignment: Alignment.topLeft,
                 child: Icon(
                   Icons.scanner,
                   color: Colors.grey,
@@ -281,12 +324,11 @@ class _SavedVideosPageState extends State<SavedVideosPage>
 
 class VideoDetails {
   final Uint8List? thumbnail;
-  final VideoData? videoData;
-  final String filePath;
+  final MediaInfo mediaInfo;
   bool maybeDuplicated = false;
   String? md5String;
 
-  VideoDetails(this.thumbnail, this.videoData, this.filePath);
+  VideoDetails(this.thumbnail, this.mediaInfo);
 
   void maybeDuplicatedWith(VideoDetails videoDetails) {
     maybeDuplicated = true;
@@ -298,7 +340,7 @@ class VideoDetails {
       return md5String;
     }
 
-    final file = File(filePath);
+    final file = File(mediaInfo.path.orEmpty());
     if (!file.existsSync()) return md5String = "";
 
     try {
