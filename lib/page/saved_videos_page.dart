@@ -10,6 +10,7 @@ import 'package:video_downloader/utils/formatter.dart';
 import 'package:video_downloader/widget/dialog.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:crypto/crypto.dart';
+import '../utils/file_utils.dart';
 import 'disposable_widget.dart';
 
 class SavedVideosPage extends StatefulWidget {
@@ -57,6 +58,10 @@ class _SavedVideosPageState extends State<SavedVideosPage>
         final detailsList = <VideoDetails>[];
 
         dir.list(recursive: true).asyncMap((file) async {
+          if (file is! File || (!isVideo(file.path))) {
+            return null;
+          }
+
           final thumbnail = await VideoCompress.getByteThumbnail(
             file.path,
             quality: 80,
@@ -69,14 +74,11 @@ class _SavedVideosPageState extends State<SavedVideosPage>
           return VideoDetails(thumbnail, mediaInfo);
         }).listen(
           (info) {
-            detailsList.add(info);
-          },
-          onDone: () async {
-            await VideoCompress.deleteAllCache();
-            if (kDebugMode) {
-              print("deleted all cache of VideoCompress");
+            if (info != null) {
+              detailsList.add(info);
             }
-
+          },
+          onDone: () {
             setState(() {
               _videoDetailsList = detailsList;
               _updateTotalVideosInfo();

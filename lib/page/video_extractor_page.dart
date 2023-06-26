@@ -1,13 +1,20 @@
+import 'dart:ffi';
+import 'dart:io';
+
 import 'package:chewie/chewie.dart';
 import 'package:dartx/dartx.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:video_downloader/page/disposable_widget.dart';
 import 'package:video_downloader/utils/formatter.dart';
+import 'package:video_downloader/widget/dialog.dart';
 import 'package:video_downloader/widget/load_button.dart';
 import 'package:video_downloader/widget/toast.dart';
 import 'package:video_player/video_player.dart';
 import '../downloader/twitter_video_downloader.dart';
+import '../utils/file_utils.dart';
 import 'lifecycle_state.dart';
 
 class VideoExtractorPage extends StatefulWidget {
@@ -28,11 +35,13 @@ class _VideoExtractorPageState extends LifecycleState<VideoExtractorPage> {
   ChewieController? _chewieController;
   bool _isSaveButtonVisible = false;
   final _saveVideoController = LoadResultController();
+  String _cacheSize = "";
 
   @override
   void initState() {
     super.initState();
     widget._tabController.addListener(onResume);
+    _loadCacheSize();
   }
 
   @override
@@ -55,6 +64,14 @@ class _VideoExtractorPageState extends LifecycleState<VideoExtractorPage> {
     if (widget._tabController.index == 0) {
       _pasteFromClipboard();
     }
+  }
+
+  void _loadCacheSize() {
+    getCacheSize().asStream().listen((size) {
+      setState(() {
+        _cacheSize = size.readableFileSize();
+      });
+    }).canceledBy(this);
   }
 
   Future<void> _pasteFromClipboard() async {
@@ -169,28 +186,50 @@ class _VideoExtractorPageState extends LifecycleState<VideoExtractorPage> {
   }
 
   Widget _buildBottomButtons() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Visibility(
-          visible: _isSaveButtonVisible,
-          child: Padding(
-            padding: const EdgeInsets.only(top: 10),
-            child: LoadButton(
-              loadResultController: _saveVideoController,
-              onPressed: () async {
-                await widget._twitterVideoDownloader.downloadVideo(_videoUrl,
-                    progressCallback: (count, total) {
-                  _saveVideoController
-                      .setResult("${(count * 100 / total).round()}%");
-                });
-              },
-              iconData: Icons.save,
-              text: 'Save',
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          ElevatedButton.icon(
+            onPressed: () async {
+              showLoadingDialog(this, context);
+
+              await deleteCaches();
+              final size = await getCacheSize();
+
+              setState(() {
+                _cacheSize = size.readableFileSize();
+                dismissDialog(context);
+              });
+            },
+            icon: const Icon(Icons.clear_all),
+            label: const Text('Clear Caches'),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 5),
+            child: Text(_cacheSize),
+          ),
+          Visibility(
+            visible: _isSaveButtonVisible,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 10),
+              child: LoadButton(
+                loadResultController: _saveVideoController,
+                onPressed: () async {
+                  await widget._twitterVideoDownloader.downloadVideo(_videoUrl,
+                      progressCallback: (count, total) {
+                    _saveVideoController
+                        .setResult("${(count * 100 / total).round()}%");
+                  });
+                },
+                iconData: Icons.save,
+                text: 'Save',
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
