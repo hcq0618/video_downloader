@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:video_compress/video_compress.dart';
 import 'package:video_downloader/page/video_player_page.dart';
 import 'package:video_downloader/utils/formatter.dart';
+import 'package:video_downloader/utils/shared_prefs.dart';
 import 'package:video_downloader/widget/dialog.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:crypto/crypto.dart';
@@ -26,6 +27,7 @@ class _SavedVideosPageState extends State<SavedVideosPage>
     with DisposableWidget, AutomaticKeepAliveClientMixin {
   List<VideoDetails> _videoDetailsList = [];
   String _totalVideosInfo = '';
+  bool _isVideoThumbnailVisible = true;
 
   @override
   bool wantKeepAlive = true;
@@ -34,6 +36,12 @@ class _SavedVideosPageState extends State<SavedVideosPage>
   void initState() {
     super.initState();
     widget._tabController.addListener(onTabChanged);
+
+    isVideoThumbnailVisible().asStream().listen((visible) {
+      setState(() {
+        _isVideoThumbnailVisible = visible;
+      });
+    }).canceledBy(this);
   }
 
   @override
@@ -185,7 +193,7 @@ class _SavedVideosPageState extends State<SavedVideosPage>
           padding: const EdgeInsets.only(left: 5),
           child: IconButton(
             onPressed: () async {
-              _scanDuplicatedVideos();
+              await _scanDuplicatedVideos();
             },
             icon: const Icon(Icons.scanner),
           ),
@@ -217,6 +225,21 @@ class _SavedVideosPageState extends State<SavedVideosPage>
         ),
         Padding(
           padding: const EdgeInsets.only(left: 5),
+          child: IconButton(
+            onPressed: () async {
+              await setVideoThumbnailVisible(!_isVideoThumbnailVisible);
+
+              setState(() {
+                _isVideoThumbnailVisible = !_isVideoThumbnailVisible;
+              });
+            },
+            icon: Icon(_isVideoThumbnailVisible
+                ? Icons.remove_red_eye_rounded
+                : Icons.remove_red_eye_outlined),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(left: 5),
           child: Text(_totalVideosInfo),
         ),
       ],
@@ -231,7 +254,7 @@ class _SavedVideosPageState extends State<SavedVideosPage>
           children: [
             Align(
               alignment: Alignment.center,
-              child: details.thumbnail != null
+              child: details.thumbnail != null && _isVideoThumbnailVisible
                   ? Image.memory(details.thumbnail!)
                   : const SizedBox.shrink(),
             ),

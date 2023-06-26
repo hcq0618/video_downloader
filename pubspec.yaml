@@ -59,6 +59,8 @@ dependencies:
   video_compress: ^3.1.2
   # https://pub.dev/packages/mime
   mime: ^1.0.4
+  # https://pub.dev/packages/shared_preferences
+  shared_preferences: ^2.1.2
 
 dev_dependencies:
 

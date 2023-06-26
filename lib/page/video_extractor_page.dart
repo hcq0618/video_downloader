@@ -1,12 +1,8 @@
-import 'dart:ffi';
-import 'dart:io';
-
 import 'package:chewie/chewie.dart';
 import 'package:dartx/dartx.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:video_downloader/page/disposable_widget.dart';
 import 'package:video_downloader/utils/formatter.dart';
 import 'package:video_downloader/widget/dialog.dart';
@@ -191,6 +187,24 @@ class _VideoExtractorPageState extends LifecycleState<VideoExtractorPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          Visibility(
+            visible: _isSaveButtonVisible,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 10),
+              child: LoadButton(
+                loadResultController: _saveVideoController,
+                onPressed: () async {
+                  await widget._twitterVideoDownloader.downloadVideo(_videoUrl,
+                      progressCallback: (count, total) {
+                    _saveVideoController
+                        .setResult("${(count * 100 / total).round()}%");
+                  });
+                },
+                iconData: Icons.save,
+                text: 'Save',
+              ),
+            ),
+          ),
           ElevatedButton.icon(
             onPressed: () async {
               showLoadingDialog(this, context);
@@ -209,24 +223,6 @@ class _VideoExtractorPageState extends LifecycleState<VideoExtractorPage> {
           Padding(
             padding: const EdgeInsets.only(left: 5),
             child: Text(_cacheSize),
-          ),
-          Visibility(
-            visible: _isSaveButtonVisible,
-            child: Padding(
-              padding: const EdgeInsets.only(left: 10),
-              child: LoadButton(
-                loadResultController: _saveVideoController,
-                onPressed: () async {
-                  await widget._twitterVideoDownloader.downloadVideo(_videoUrl,
-                      progressCallback: (count, total) {
-                    _saveVideoController
-                        .setResult("${(count * 100 / total).round()}%");
-                  });
-                },
-                iconData: Icons.save,
-                text: 'Save',
-              ),
-            ),
           ),
         ],
       ),
