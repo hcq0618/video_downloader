@@ -290,20 +290,19 @@ class _SavedVideosPageState extends State<SavedVideosPage>
               alignment: Alignment.topRight,
               child: GestureDetector(
                 onTap: () {
-                  showConfirmDialog(
-                      this, context, "Do you want to compress the video?",
-                      () async {
+                  showCompressVideoDialog(this, context, (quality) async {
                     showLoadingDialog(this, context);
 
                     final originalPath = details.mediaInfo.path.orEmpty();
                     final mediaInfo = await VideoCompress.compressVideo(
                       originalPath,
-                      quality: VideoQuality.DefaultQuality,
+                      quality: quality,
                       includeAudio: true,
                       deleteOrigin: true,
                     );
-                    final compressPath = mediaInfo?.path ?? "";
-                    await File(compressPath).copy(originalPath);
+                    final compressedFile = File(mediaInfo?.path ?? "");
+                    await compressedFile.copy(originalPath);
+                    await compressedFile.delete();
 
                     setState(() {
                       dismissDialog(context);
