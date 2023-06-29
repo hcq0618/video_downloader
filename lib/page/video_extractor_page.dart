@@ -71,8 +71,11 @@ class _VideoExtractorPageState extends LifecycleState<VideoExtractorPage> {
   }
 
   Future<void> _pasteFromClipboard() async {
-    final data = await Clipboard.getData(Clipboard.kTextPlain);
-    _urlEditorController.text = data?.text ?? '';
+    final clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
+    final data = clipboardData?.text ?? '';
+    if (data.startsWith('http')) {
+      _urlEditorController.text = data;
+    }
   }
 
   @override
