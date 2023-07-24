@@ -61,6 +61,10 @@ dependencies:
   mime: ^1.0.4
   # https://pub.dev/packages/shared_preferences
   shared_preferences: ^2.1.2
+  # https://pub.dev/packages/webview_cookie_manager
+  webview_cookie_manager: ^2.0.6
+  # https://pub.dev/packages/webview_flutter
+  webview_flutter: ^4.2.2
 
 dev_dependencies:
 

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:dartx/dartx.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:video_downloader/downloader/video_downloader.dart';
 
 // https://github.com/TamilKannanCV/twitter_extractor not working now
@@ -23,15 +24,19 @@ class TwitterVideoDownloader extends VideoDownloader {
     return _urlPattern.firstMatch(url)?.namedGroup("username")?.toString();
   }
 
-  Future<Tweet> _extractTweet(String tweetUrl) async {
+  Future<Tweet> _extractTweet(BuildContext context, String tweetUrl) async {
     final id = _getId(tweetUrl);
     if (id == null) {
       return Future.error("Unable to get ID");
     }
 
     final headers = {
-      'User-agent':
-          'Mozilla/5.0 (Windows NT 6.3; Win64; x64; rv:76.0) Gecko/20100101 Firefox/76.0'
+      "User-agent":
+          "Mozilla/5.0 (Windows NT 6.3; Win64; x64; rv:76.0) Gecko/20100101 Firefox/76.0",
+      // "Content-type": "application/json",
+      "Referer": "https://twitter.com/i/web/status/$id",
+      "x-twitter-active-user": "yes",
+      // "x-twitter-client-language": "en",
     };
     final bearerFileResponse = await dio.get(
         "https://twitter.com/i/videos/tweet/$id",
@@ -55,7 +60,7 @@ class TwitterVideoDownloader extends VideoDownloader {
       print(bearerToken);
     }
 
-    headers['authorization'] = bearerToken;
+    headers['Authorization'] = bearerToken;
     // migrate to twitter api 2.0?
     final guestTokenResponse = await dio.post(
         "https://api.twitter.com/1.1/guest/activate.json",
@@ -68,11 +73,11 @@ class TwitterVideoDownloader extends VideoDownloader {
     if (kDebugMode) {
       print("guest token: $guestToken");
     }
-
     headers['x-guest-token'] = guestToken.toString();
+
     // migrate to twitter api 2.0?
     final tweetInfoResponse = await dio.get(
-        "https://api.twitter.com/1.1/statuses/show.json?id=$id",
+        "https://api.twitter.com/1.1/statuses/show.json?id=$id&tweet_mode=extended",
         options: Options(headers: headers));
     if (kDebugMode) {
       print(tweetInfoResponse);
@@ -81,13 +86,13 @@ class TwitterVideoDownloader extends VideoDownloader {
   }
 
   @override
-  Future<Video?> extractVideo(String sourceUrl) async {
+  Future<Video?> extractVideo(BuildContext context, String sourceUrl) async {
     if (sourceUrl.isEmpty) {
       return null;
     }
 
     try {
-      final tweet = await _extractTweet(sourceUrl);
+      final tweet = await _extractTweet(context, sourceUrl);
       return tweet.video;
     } catch (e) {
       if (kDebugMode) {
@@ -105,7 +110,7 @@ class Tweet {
   const Tweet(this.text, this.video);
 
   static Future<Tweet> _fromJson(Dio dio, Map<String, dynamic> data) async {
-    final text = data['text'];
+    final text = data['full_text'];
     final Map<String, dynamic> entities = data['extended_entities'];
     final List<dynamic> medias = entities['media'];
     if (medias.isEmpty) {

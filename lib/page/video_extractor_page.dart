@@ -107,14 +107,15 @@ class _VideoExtractorPageState extends LifecycleState<VideoExtractorPage> {
     _disposePlayer();
 
     final video = await widget._twitterVideoDownloader
-        .extractVideo(_urlEditorController.text);
+        .extractVideo(context, _urlEditorController.text);
     final videoUrl = video?.url ?? '';
     if (kDebugMode) {
       print(videoUrl);
     }
 
     if (videoUrl.isNotNullOrEmpty) {
-      final videoPlayerController = VideoPlayerController.network(videoUrl);
+      final videoPlayerController =
+          VideoPlayerController.networkUrl(Uri.parse(videoUrl));
       _videoPlayerController = videoPlayerController;
 
       _chewieController = ChewieController(

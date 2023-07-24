@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
@@ -7,7 +8,7 @@ abstract class VideoDownloader {
   @protected
   final dio = Dio();
 
-  Future<Video?> extractVideo(String sourceUrl);
+  Future<Video?> extractVideo(BuildContext context, String sourceUrl);
 
   Future<void> downloadVideo(String videoUrl,
       {ProgressCallback? progressCallback}) async {
