@@ -115,17 +115,21 @@ class TwitterVideoDownloader extends VideoDownloader {
 
   Future<Tweet?> _getTweet(String tweetId, Map<String, String?> headers) async {
     // migrate to twitter api 2.0? https://github.com/EltonChou/TwitterMediaHarvest/blob/main/src/backend/twitterApi/useCases.ts#L102
-    final tweetResponse = await dio.get(
-        "https://api.twitter.com/1.1/statuses/show.json?id=$tweetId&tweet_mode=extended",
-        options: Options(headers: headers));
-    if (kDebugMode) {
-      print(tweetResponse);
-    }
-
-    if (tweetResponse.statusCode == 200) {
+    try {
+      final tweetResponse = await dio.get(
+          "https://api.twitter.com/1.1/statuses/show.json?id=$tweetId&tweet_mode=extended",
+          options: Options(headers: headers));
+      if (kDebugMode) {
+        print(tweetResponse);
+      }
       return Tweet._fromJson(dio, json.decode(tweetResponse.toString()));
+    } on DioException catch (e) {
+      if (kDebugMode) {
+        print(
+            "get tweet response error: ${e.response?.statusCode} ${e.response?.statusMessage}");
+      }
+      return null;
     }
-    return null;
   }
 
   @override
