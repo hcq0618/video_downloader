@@ -4,11 +4,18 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:video_downloader/downloader/video_downloader.dart';
+import 'package:video_downloader/page/tweet_webview_page.dart';
 
 // https://github.com/TamilKannanCV/twitter_extractor not working now
 // https://github.com/7rikazhexde/twitter-video-dl-for-sc need to verify
-// https://github.com/f-rog/twitter2mp4 refer to this currently
+// refer to these currently https://github.com/f-rog/twitter2mp4 and https://github.com/EltonChou/TwitterMediaHarvest/blob/main/src/backend/twitterApi/useCases.ts
+
+// We can not directly use twitter APIs for free plan
+// For apiKey/apiSecretKey, we can refer to https://pub.dev/packages/twitter_login/example
+// For twitter api or custom api, we can use https://pub.dev/packages/dart_twitter_api and https://pub.dev/packages/twitter_api_v2
 class TwitterVideoDownloader extends VideoDownloader {
+  static const guestTokenKey = 'x-guest-token';
+
   final _urlPattern = RegExp(
       r"(https?://twitter\.com/(?:!/)?(?<username>\w+)/status(es)?/(?<id>\d+))");
 
@@ -24,22 +31,24 @@ class TwitterVideoDownloader extends VideoDownloader {
     return _urlPattern.firstMatch(url)?.namedGroup("username")?.toString();
   }
 
-  Future<Tweet> _extractTweet(BuildContext context, String tweetUrl) async {
-    final id = _getId(tweetUrl);
-    if (id == null) {
+  Future<Tweet?> _extractTweet(BuildContext context, String tweetUrl) async {
+    final tweetId = _getId(tweetUrl);
+    if (tweetId == null) {
       return Future.error("Unable to get ID");
     }
+    if (kDebugMode) {
+      print(tweetId);
+    }
 
-    final headers = {
+    final Map<String, String?> headers = {
       "User-agent":
           "Mozilla/5.0 (Windows NT 6.3; Win64; x64; rv:76.0) Gecko/20100101 Firefox/76.0",
       // "Content-type": "application/json",
-      "Referer": "https://twitter.com/i/web/status/$id",
+      "Referer": "https://twitter.com/i/web/status/$tweetId",
       "x-twitter-active-user": "yes",
-      // "x-twitter-client-language": "en",
     };
     final bearerFileResponse = await dio.get(
-        "https://twitter.com/i/videos/tweet/$id",
+        "https://twitter.com/i/videos/tweet/$tweetId",
         options: Options(headers: headers));
 
     final bearerFileUrl =
@@ -73,16 +82,50 @@ class TwitterVideoDownloader extends VideoDownloader {
     if (kDebugMode) {
       print("guest token: $guestToken");
     }
-    headers['x-guest-token'] = guestToken.toString();
+    headers[guestTokenKey] = guestToken.toString();
 
-    // migrate to twitter api 2.0?
-    final tweetInfoResponse = await dio.get(
-        "https://api.twitter.com/1.1/statuses/show.json?id=$id&tweet_mode=extended",
+    var tweet = await _getTweet(tweetId, headers);
+    if (tweet != null) {
+      return tweet;
+    }
+
+    if (context.mounted) {
+      await _openTweetPage(context, tweetUrl, headers);
+      return _getTweet(tweetId, headers);
+    }
+    return null;
+  }
+
+  Future<void> _openTweetPage(BuildContext context, String tweetUrl,
+      Map<String, String?> headers) async {
+    final result = await Navigator.push<Map<String, String?>>(
+      context,
+      MaterialPageRoute(builder: (context) => TweetWebViewPage(tweetUrl)),
+    );
+    if (result != null) {
+      if (!result.containsKey(guestTokenKey)) {
+        headers.remove(guestTokenKey);
+      }
+      headers.addAll(result);
+    }
+    if (kDebugMode) {
+      print(headers);
+    }
+  }
+
+  Future<Tweet?> _getTweet(String tweetId, Map<String, String?> headers) async {
+    // migrate to twitter api 2.0? https://github.com/EltonChou/TwitterMediaHarvest/blob/main/src/backend/twitterApi/useCases.ts#L102
+    final tweetResponse = await dio.get(
+        "https://api.twitter.com/1.1/statuses/show.json?id=$tweetId&tweet_mode=extended",
         options: Options(headers: headers));
     if (kDebugMode) {
-      print(tweetInfoResponse);
+      print(tweetResponse);
     }
-    return Tweet._fromJson(dio, json.decode(tweetInfoResponse.toString()));
+
+    if (tweetResponse.statusCode == 200) {
+      return Tweet._fromJson(dio, json.decode(tweetResponse.toString()));
+    }
+    return null;
   }
 
   @override
@@ -93,7 +136,7 @@ class TwitterVideoDownloader extends VideoDownloader {
 
     try {
       final tweet = await _extractTweet(context, sourceUrl);
-      return tweet.video;
+      return tweet?.video;
     } catch (e) {
       if (kDebugMode) {
         print(e);
