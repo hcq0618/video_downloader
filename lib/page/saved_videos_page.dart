@@ -70,6 +70,7 @@ class _SavedVideosPageState extends State<SavedVideosPage>
             return null;
           }
 
+          final lastModified = await file.lastModified();
           final thumbnail = await VideoCompress.getByteThumbnail(
             file.path,
             quality: 80,
@@ -79,16 +80,19 @@ class _SavedVideosPageState extends State<SavedVideosPage>
           if (kDebugMode) {
             print(mediaInfo.path);
           }
-          return VideoDetails(thumbnail, mediaInfo);
+          return VideoDetails(
+              lastModified.millisecondsSinceEpoch, thumbnail, mediaInfo);
         }).listen(
           (info) {
             if (info != null) {
               detailsList.add(info);
             }
           },
-          onDone: () {
+          onDone: () async {
+            final sortedDetailsList = await _sortDetailsList(detailsList);
+
             setState(() {
-              _videoDetailsList = detailsList;
+              _videoDetailsList = sortedDetailsList;
               _updateTotalVideosInfo();
               dismissDialog(context);
             });
@@ -98,6 +102,11 @@ class _SavedVideosPageState extends State<SavedVideosPage>
         ).canceledBy(this);
       }).canceledBy(this);
     }
+  }
+
+  Future<List<VideoDetails>> _sortDetailsList(
+      List<VideoDetails> detailsList) async {
+    return detailsList.sortedByDescending((element) => element.lastModified);
   }
 
   void _updateTotalVideosInfo() {
@@ -347,12 +356,13 @@ class _SavedVideosPageState extends State<SavedVideosPage>
 }
 
 class VideoDetails {
+  final int lastModified;
   final Uint8List? thumbnail;
   final MediaInfo mediaInfo;
   bool maybeDuplicated = false;
   String? md5String;
 
-  VideoDetails(this.thumbnail, this.mediaInfo);
+  VideoDetails(this.lastModified, this.thumbnail, this.mediaInfo);
 
   void maybeDuplicatedWith(VideoDetails videoDetails) {
     maybeDuplicated = true;
