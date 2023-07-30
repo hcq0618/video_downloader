@@ -71,7 +71,7 @@ class _SavedVideosPageState extends State<SavedVideosPage>
           }
 
           final lastModified = await file.lastModified();
-          final thumbnail = await VideoCompress.getByteThumbnail(
+          final thumbnail = await VideoCompress.getFileThumbnail(
             file.path,
             quality: 80,
             position: 1,
@@ -264,7 +264,7 @@ class _SavedVideosPageState extends State<SavedVideosPage>
             Align(
               alignment: Alignment.center,
               child: details.thumbnail != null && _isVideoThumbnailVisible
-                  ? Image.memory(details.thumbnail!)
+                  ? Image.file(details.thumbnail!)
                   : const SizedBox.shrink(),
             ),
             Align(
@@ -357,7 +357,7 @@ class _SavedVideosPageState extends State<SavedVideosPage>
 
 class VideoDetails {
   final int lastModified;
-  final Uint8List? thumbnail;
+  final File? thumbnail;
   final MediaInfo mediaInfo;
   bool maybeDuplicated = false;
   String? md5String;
