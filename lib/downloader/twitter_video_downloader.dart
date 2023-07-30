@@ -23,7 +23,7 @@ class TwitterVideoDownloader extends VideoDownloader {
     return _urlPattern.hasMatch(url);
   }
 
-  String? _getId(String url) {
+  String? _getTweetId(String url) {
     return _urlPattern.firstMatch(url)?.namedGroup("id")?.toString();
   }
 
@@ -31,8 +31,20 @@ class TwitterVideoDownloader extends VideoDownloader {
     return _urlPattern.firstMatch(url)?.namedGroup("username")?.toString();
   }
 
+  @override
+  Map<String, String> getBasicHeaders(String sourceUrl) {
+    final tweetId = _getTweetId(sourceUrl);
+    return {
+      "User-agent":
+          "Mozilla/5.0 (Windows NT 6.3; Win64; x64; rv:76.0) Gecko/20100101 Firefox/76.0",
+      // "Content-type": "application/json",
+      "Referer": "https://twitter.com/i/web/status/$tweetId",
+      "x-twitter-active-user": "yes",
+    };
+  }
+
   Future<Tweet?> _extractTweet(BuildContext context, String tweetUrl) async {
-    final tweetId = _getId(tweetUrl);
+    final tweetId = _getTweetId(tweetUrl);
     if (tweetId == null) {
       return Future.error("Unable to get ID");
     }
@@ -40,13 +52,7 @@ class TwitterVideoDownloader extends VideoDownloader {
       print(tweetId);
     }
 
-    final Map<String, String?> headers = {
-      "User-agent":
-          "Mozilla/5.0 (Windows NT 6.3; Win64; x64; rv:76.0) Gecko/20100101 Firefox/76.0",
-      // "Content-type": "application/json",
-      "Referer": "https://twitter.com/i/web/status/$tweetId",
-      "x-twitter-active-user": "yes",
-    };
+    final Map<String, String> headers = getBasicHeaders(tweetUrl);
     final bearerFileResponse = await dio.get(
         "https://twitter.com/i/videos/tweet/$tweetId",
         options: Options(headers: headers));
@@ -84,21 +90,25 @@ class TwitterVideoDownloader extends VideoDownloader {
     }
     headers[guestTokenKey] = guestToken.toString();
 
-    var tweet = await _getTweet(tweetId, headers);
-    if (tweet != null) {
-      return tweet;
+    if (context.mounted) {
+      var tweet = await _getTweet(context, tweetId, headers);
+      if (tweet != null) {
+        return tweet;
+      }
     }
 
     if (context.mounted) {
       await _openTweetPage(context, tweetUrl, headers);
-      return _getTweet(tweetId, headers);
+    }
+    if (context.mounted) {
+      return _getTweet(context, tweetId, headers);
     }
     return null;
   }
 
   Future<void> _openTweetPage(BuildContext context, String tweetUrl,
-      Map<String, String?> headers) async {
-    final result = await Navigator.push<Map<String, String?>>(
+      Map<String, String> headers) async {
+    final result = await Navigator.push<Map<String, String>>(
       context,
       MaterialPageRoute(builder: (context) => TweetWebViewPage(tweetUrl)),
     );
@@ -113,7 +123,8 @@ class TwitterVideoDownloader extends VideoDownloader {
     }
   }
 
-  Future<Tweet?> _getTweet(String tweetId, Map<String, String?> headers) async {
+  Future<Tweet?> _getTweet(
+      BuildContext context, String tweetId, Map<String, String> headers) async {
     // migrate to twitter api 2.0? https://github.com/EltonChou/TwitterMediaHarvest/blob/main/src/backend/twitterApi/useCases.ts#L102
     try {
       final tweetResponse = await dio.get(
@@ -122,7 +133,14 @@ class TwitterVideoDownloader extends VideoDownloader {
       if (kDebugMode) {
         print(tweetResponse);
       }
-      return Tweet._fromJson(dio, json.decode(tweetResponse.toString()));
+
+      final data = json.decode(tweetResponse.toString());
+      final tweet = await Tweet._fromJson(dio, data);
+      if (tweet == null && context.mounted) {
+        final redirectUrl = Tweet._getRedirectUrl(data);
+        return _extractTweet(context, redirectUrl);
+      }
+      return tweet;
     } on DioException catch (e) {
       if (kDebugMode) {
         print(
@@ -156,9 +174,13 @@ class Tweet {
 
   const Tweet(this.text, this.video);
 
-  static Future<Tweet> _fromJson(Dio dio, Map<String, dynamic> data) async {
+  static Future<Tweet?> _fromJson(Dio dio, Map<String, dynamic> data) async {
+    final Map<String, dynamic>? entities = data['extended_entities'];
+    if (entities == null) {
+      return null;
+    }
+
     final text = data['full_text'];
-    final Map<String, dynamic> entities = data['extended_entities'];
     final List<dynamic> medias = entities['media'];
     if (medias.isEmpty) {
       return Tweet(text, null);
@@ -169,6 +191,16 @@ class Tweet {
       return Tweet(text, null);
     }
     return Tweet(text, await TweetVideo._fromJson(dio, videoMedia));
+  }
+
+  static String _getRedirectUrl(Map<String, dynamic> data) {
+    final Map<String, dynamic> entities = data['entities'];
+    final List<dynamic> urls = entities['urls'];
+    final expandedUrl = urls[0]['expanded_url'];
+    if (kDebugMode) {
+      print("expanded_url: $expandedUrl");
+    }
+    return expandedUrl;
   }
 }
 
@@ -195,10 +227,10 @@ class TweetVideo extends Video {
       return null;
     }
     final url = video['url'];
-    // if (kDebugMode) {
-    //   print("video url: $url");
-    // }
-    final videoResponse = await dio.get(url);
+    if (kDebugMode) {
+      print("video url: $url");
+    }
+    final videoResponse = await dio.head(url);
     var contentLength =
         videoResponse.headers['content-length']?.firstOrNull?.toIntOrNull();
     if (contentLength == null || contentLength == 0) {
@@ -209,8 +241,13 @@ class TweetVideo extends Video {
       }
     }
 
-    final thumb = data['media_url'];
+    final thumbUrl = data['media_url'];
     final duration = videoInfo['duration_millis'];
-    return TweetVideo(thumb, url, duration, contentLength ?? 0);
+    if (kDebugMode) {
+      print("video length: $contentLength");
+      print("video thumb url: $thumbUrl");
+      print("video duration: $duration");
+    }
+    return TweetVideo(thumbUrl, url, duration, contentLength ?? 0);
   }
 }

@@ -47,9 +47,9 @@ class _TweetWebViewPageState extends State<TweetWebViewPage>
             cookies.firstOrNullWhere((cookie) => cookie.name == 'ct0')?.value;
         final guestToken =
             cookies.firstOrNullWhere((cookie) => cookie.name == 'gt')?.value;
-        final result = {'x-csrf-token': csrfToken};
+        final result = {'x-csrf-token': csrfToken.orEmpty()};
         if (guestToken != null) {
-          result[TwitterVideoDownloader.guestTokenKey] = guestToken;
+          result[TwitterVideoDownloader.guestTokenKey] = guestToken.orEmpty();
         } else {
           result['x-twitter-auth-type'] = 'OAuth2Session';
         }

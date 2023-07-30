@@ -8,6 +8,8 @@ abstract class VideoDownloader {
   @protected
   final dio = Dio();
 
+  Map<String, String> getBasicHeaders(String sourceUrl);
+
   Future<Video?> extractVideo(BuildContext context, String sourceUrl);
 
   Future<void> downloadVideo(String videoUrl,
