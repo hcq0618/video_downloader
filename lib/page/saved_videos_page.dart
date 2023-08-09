@@ -329,7 +329,7 @@ class _SavedVideosPageState extends State<SavedVideosPage>
               child: Padding(
                 padding: const EdgeInsets.all(3),
                 child: Text(
-                  details.fileSize.readableFileSize() ?? "",
+                  details.fileSize.readableFileSize(),
                   style: const TextStyle(color: Colors.white),
                 ),
               ),
