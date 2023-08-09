@@ -89,23 +89,25 @@ Future<void> showConfirmDialog(
 }
 
 Future<void> showLoadingDialog(
-    DisposableWidget disposableState, BuildContext context) async {
+    DisposableWidget disposableState, BuildContext context,
+    {String? text, double? horizontal, double? vertical}) async {
   return showDialog(
     // The user CANNOT close this dialog  by pressing outside it
     barrierDismissible: false,
     context: context,
     builder: (context) {
       disposableState.addDialog(context);
-      return const Dialog(
+      return Dialog(
         backgroundColor: Colors.white,
-        insetPadding: EdgeInsets.symmetric(horizontal: 120.0, vertical: 38.0),
+        insetPadding: EdgeInsets.symmetric(
+            horizontal: horizontal ?? 120.0, vertical: vertical ?? 38.0),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(strokeWidth: 2),
+            const CircularProgressIndicator(strokeWidth: 2),
             Padding(
-              padding: EdgeInsets.only(left: 15, top: 25, bottom: 25),
-              child: Text('Loading...'),
+              padding: const EdgeInsets.only(left: 15, top: 25, bottom: 25),
+              child: Text(text ?? 'Loading...'),
             ),
           ],
         ),

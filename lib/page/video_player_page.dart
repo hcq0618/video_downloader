@@ -28,8 +28,8 @@ class _VideoPlayerPageState extends State<VideoPlayerPage>
   @override
   void initState() {
     super.initState();
-    _videoPlayerController = VideoPlayerController.file(
-        File(widget._details.mediaInfo.path.orEmpty()));
+    _videoPlayerController =
+        VideoPlayerController.file(File(widget._details.path.orEmpty()));
     _chewieController = ChewieController(
         videoPlayerController: _videoPlayerController,
         autoInitialize: true,
@@ -49,7 +49,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage>
     return WillPopScope(
       child: Scaffold(
         appBar: AppBar(
-          title: Text(basename(widget._details.mediaInfo.path.orEmpty())),
+          title: Text(basename(widget._details.path.orEmpty())),
         ),
         body: Column(
           children: [
@@ -65,7 +65,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage>
                   ElevatedButton.icon(
                     onPressed: () {
                       showVideoDeleteDialog(this, context, () async {
-                        await File(widget._details.mediaInfo.path.orEmpty())
+                        await File(widget._details.path.orEmpty())
                             .delete();
                         if (!mounted) return;
                         Navigator.pop(context, true);
@@ -80,7 +80,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage>
                       onPressed: () async {
                         _videoChanged = true;
                         await GallerySaver.saveVideo(
-                            widget._details.mediaInfo.path.orEmpty());
+                            widget._details.path.orEmpty());
                         if (!mounted) return;
                         'Export success'.showToast(context);
                       },

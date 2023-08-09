@@ -66,22 +66,19 @@ class _SavedVideosPageState extends State<SavedVideosPage>
         final detailsList = <VideoDetails>[];
 
         dir.list(recursive: true).asyncMap((file) async {
-          if (file is! File || (!isVideo(file.path))) {
-            return null;
-          }
+          if (file is File && isVideo(file.path)) {
+            final existing = _videoDetailsList.firstOrNullWhere((element) {
+              return file.path == element.path;
+            });
+            final lastModified = await file.lastModified();
 
-          final lastModified = await file.lastModified();
-          final thumbnail = await VideoCompress.getFileThumbnail(
-            file.path,
-            quality: 80,
-            position: 1,
-          );
-          final mediaInfo = await VideoCompress.getMediaInfo(file.path);
-          if (kDebugMode) {
-            print(mediaInfo.path);
+            if (existing?.lastModified != lastModified.millisecondsSinceEpoch) {
+              return _convertToDetails(file, lastModifiedTime: lastModified);
+            } else {
+              return existing;
+            }
           }
-          return VideoDetails(
-              lastModified.millisecondsSinceEpoch, thumbnail, mediaInfo);
+          return null;
         }).listen(
           (info) {
             if (info != null) {
@@ -100,8 +97,18 @@ class _SavedVideosPageState extends State<SavedVideosPage>
           onError: (_) => dismissDialog(context),
           cancelOnError: true,
         ).canceledBy(this);
-      }).canceledBy(this);
+      },
+          onError: (_) => dismissDialog(context),
+          cancelOnError: true).canceledBy(this);
     }
+  }
+
+  Future<VideoDetails> _convertToDetails(File file,
+      {DateTime? lastModifiedTime}) async {
+    final lastModified = lastModifiedTime ?? await file.lastModified();
+    final fileSize = await file.length();
+    return VideoDetails(
+        file.path, fileSize, lastModified.millisecondsSinceEpoch);
   }
 
   Future<List<VideoDetails>> _sortDetailsList(
@@ -112,10 +119,7 @@ class _SavedVideosPageState extends State<SavedVideosPage>
   void _updateTotalVideosInfo() {
     final totalVideoCount = _videoDetailsList.length;
     final totalVideoSize = _videoDetailsList
-        .fold(
-            0,
-            (previousValue, element) =>
-                previousValue + (element.mediaInfo.filesize ?? 0))
+        .fold(0, (previousValue, element) => previousValue + element.fileSize)
         .readableFileSize();
     _totalVideosInfo = "$totalVideoCount videos $totalVideoSize";
   }
@@ -132,16 +136,16 @@ class _SavedVideosPageState extends State<SavedVideosPage>
         Expanded(
           child: Padding(
             padding: const EdgeInsets.only(top: 10),
-            child: GridView.count(
+            child: GridView.builder(
               primary: false,
               padding: const EdgeInsets.all(5),
-              crossAxisSpacing: 5,
-              mainAxisSpacing: 5,
-              crossAxisCount: 3,
-              children: List.generate(
-                  _videoDetailsList.length,
-                  (index) =>
-                      _buildVideoItem(context, _videoDetailsList[index])),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisSpacing: 5,
+                mainAxisSpacing: 5,
+                crossAxisCount: 3,
+              ),
+              itemCount: _videoDetailsList.length,
+              itemBuilder: _videoItemBuilder,
             ),
           ),
         )
@@ -149,8 +153,45 @@ class _SavedVideosPageState extends State<SavedVideosPage>
     );
   }
 
+  Widget _videoItemBuilder(BuildContext context, int index) {
+    final videoDetails = _videoDetailsList[index];
+    if (videoDetails._isMediaInfoValid()) {
+      return _buildVideoItem(context, videoDetails);
+    } else {
+      return FutureBuilder<VideoDetails>(
+        future: _getMediaInfo(videoDetails),
+        builder: (BuildContext context, AsyncSnapshot<VideoDetails> snapshot) {
+          if (snapshot.connectionState == ConnectionState.done &&
+              snapshot.data != null) {
+            return _buildVideoItem(context, snapshot.data!);
+          } else {
+            return Container(color: Colors.black);
+          }
+        },
+      );
+    }
+  }
+
+  Future<VideoDetails> _getMediaInfo(VideoDetails videoDetail) async {
+    videoDetail.thumbnail ??= await VideoCompress.getFileThumbnail(
+      videoDetail.path,
+      quality: 80,
+      position: 1,
+    );
+
+    if (videoDetail.duration == null) {
+      final mediaInfo = await VideoCompress.getMediaInfo(videoDetail.path);
+      if (kDebugMode) {
+        print(mediaInfo.path);
+      }
+      videoDetail.duration = mediaInfo.duration;
+    }
+    return videoDetail;
+  }
+
   Future<void> _scanDuplicatedVideos() async {
-    showLoadingDialog(this, context);
+    showLoadingDialog(this, context,
+        text: 'Scanning videos that maybe duplicated...', horizontal: 36);
 
     for (var videoDetails in _videoDetailsList) {
       for (var videoDetails2 in _videoDetailsList) {
@@ -161,25 +202,23 @@ class _SavedVideosPageState extends State<SavedVideosPage>
           continue;
         }
 
-        if (videoDetails.mediaInfo.path == videoDetails2.mediaInfo.path) {
-          videoDetails.maybeDuplicatedWith(videoDetails2);
+        if (videoDetails.path == videoDetails2.path) {
+          videoDetails._maybeDuplicatedWith(videoDetails2);
           continue;
         }
-        if (videoDetails.mediaInfo.filesize ==
-            videoDetails2.mediaInfo.filesize) {
-          videoDetails.maybeDuplicatedWith(videoDetails2);
+        if (videoDetails.fileSize == videoDetails2.fileSize) {
+          videoDetails._maybeDuplicatedWith(videoDetails2);
           continue;
         }
-        if (videoDetails.mediaInfo.duration ==
-            videoDetails2.mediaInfo.duration) {
-          videoDetails.maybeDuplicatedWith(videoDetails2);
+        if (videoDetails.duration == videoDetails2.duration) {
+          videoDetails._maybeDuplicatedWith(videoDetails2);
           continue;
         }
 
         final videoMD5 = await videoDetails.getMD5();
         final video2MD5 = await videoDetails2.getMD5();
         if (videoMD5 == video2MD5) {
-          videoDetails.maybeDuplicatedWith(videoDetails2);
+          videoDetails._maybeDuplicatedWith(videoDetails2);
           continue;
         }
       }
@@ -272,7 +311,7 @@ class _SavedVideosPageState extends State<SavedVideosPage>
               child: GestureDetector(
                 onTap: () {
                   showVideoDeleteDialog(this, context, () async {
-                    await File(details.mediaInfo.path.orEmpty()).delete();
+                    await File(details.path.orEmpty()).delete();
                     _videoDetailsList.remove(details);
                     setState(() {
                       _updateTotalVideosInfo();
@@ -290,7 +329,7 @@ class _SavedVideosPageState extends State<SavedVideosPage>
               child: Padding(
                 padding: const EdgeInsets.all(3),
                 child: Text(
-                  details.mediaInfo.filesize?.readableFileSize() ?? "",
+                  details.fileSize.readableFileSize() ?? "",
                   style: const TextStyle(color: Colors.white),
                 ),
               ),
@@ -302,7 +341,7 @@ class _SavedVideosPageState extends State<SavedVideosPage>
                   showCompressVideoDialog(this, context, (quality) async {
                     showLoadingDialog(this, context);
 
-                    final originalPath = details.mediaInfo.path.orEmpty();
+                    final originalPath = details.path.orEmpty();
                     final mediaInfo = await VideoCompress.compressVideo(
                       originalPath,
                       quality: quality,
@@ -313,11 +352,24 @@ class _SavedVideosPageState extends State<SavedVideosPage>
                     await compressedFile.copy(originalPath);
                     await compressedFile.delete();
 
+                    final videoDetails =
+                        await _convertToDetails(File(originalPath));
+
+                    final detailsList = _videoDetailsList.map((element) {
+                      if (element.path == originalPath) {
+                        return videoDetails;
+                      }
+                      return element;
+                    }).toList();
+
+                    final sortedDetailsList =
+                        await _sortDetailsList(detailsList);
+
                     setState(() {
+                      _videoDetailsList = sortedDetailsList;
+                      _updateTotalVideosInfo();
                       dismissDialog(context);
                     });
-
-                    _reloadSavedVideos();
                   });
                 },
                 child: const Icon(
@@ -356,17 +408,23 @@ class _SavedVideosPageState extends State<SavedVideosPage>
 }
 
 class VideoDetails {
+  final String path;
+  final int fileSize;
   final int lastModified;
-  final File? thumbnail;
-  final MediaInfo mediaInfo;
+  File? thumbnail;
+  double? duration;
   bool maybeDuplicated = false;
   String? md5String;
 
-  VideoDetails(this.lastModified, this.thumbnail, this.mediaInfo);
+  VideoDetails(this.path, this.fileSize, this.lastModified);
 
-  void maybeDuplicatedWith(VideoDetails videoDetails) {
+  void _maybeDuplicatedWith(VideoDetails videoDetails) {
     maybeDuplicated = true;
     videoDetails.maybeDuplicated = true;
+  }
+
+  bool _isMediaInfoValid() {
+    return thumbnail != null && duration != null;
   }
 
   Future<String?> getMD5() async {
@@ -374,7 +432,7 @@ class VideoDetails {
       return md5String;
     }
 
-    final file = File(mediaInfo.path.orEmpty());
+    final file = File(path.orEmpty());
     if (!file.existsSync()) return md5String = "";
 
     try {
