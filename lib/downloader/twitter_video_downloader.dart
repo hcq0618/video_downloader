@@ -16,19 +16,30 @@ import 'package:video_downloader/page/tweet_webview_page.dart';
 class TwitterVideoDownloader extends VideoDownloader {
   static const guestTokenKey = 'x-guest-token';
 
-  final _urlPattern = RegExp(
-      r"(https?://twitter\.com/(?:!/)?(?<username>\w+)/status(es)?/(?<id>\d+))");
+  static const _urlPatternSource =
+      r"(https?://twitter\.com/(?:!/)?(?<username>\w+)/status(es)?/(?<id>\d+))";
+
+  final _twitterUrlPattern = RegExp(_urlPatternSource);
+  final _xUrlPattern = RegExp(_urlPatternSource.replaceFirst("twitter", "x"));
 
   bool _isValidUrl(String url) {
-    return _urlPattern.hasMatch(url);
+    final twitterHasMatch = _twitterUrlPattern.hasMatch(url);
+    if (!twitterHasMatch) {
+      return _xUrlPattern.hasMatch(url);
+    }
+    return true;
+  }
+
+  RegExpMatch? _urlPatternMatch(String url) {
+    return _twitterUrlPattern.firstMatch(url) ?? _xUrlPattern.firstMatch(url);
   }
 
   String? _getTweetId(String url) {
-    return _urlPattern.firstMatch(url)?.namedGroup("id")?.toString();
+    return _urlPatternMatch(url)?.namedGroup("id")?.toString();
   }
 
   String? _getUsername(String url) {
-    return _urlPattern.firstMatch(url)?.namedGroup("username")?.toString();
+    return _urlPatternMatch(url)?.namedGroup("username")?.toString();
   }
 
   @override
